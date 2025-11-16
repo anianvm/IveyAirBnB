@@ -64,7 +64,7 @@ def clean_airbnb_raw(df):
     )
 
     # Remove boroughs we don't want
-    df = df[df["neighbourhood group"] != "Staten Island"]
+    df = df[df["neighbourhood group"] != "Staten Island"] # Bronx
 
     # --- FILTER ROOM TYPES --- #
     df = df[df["room type"].isin(["Private room", "Entire home/apt"])]

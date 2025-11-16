@@ -5,11 +5,20 @@ from clean_airbnb import clean_airbnb_raw
 def preprocess_for_knn(df_raw):
     df = clean_airbnb_raw(df_raw)
 
-    # dummy encoding
-    cat_cols = df.select_dtypes(include=["object", "category"]).columns
-    df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
+    # --- Dummy encoding first ---
+    columns_to_dummy = [
+        'host_identity_verified',
+        'neighbourhood group',
+        'instant_bookable',
+        'cancellation_policy',
+        'room type'
+    ]
 
-    # scale everything (required for KNN + KMeans)
+    df[columns_to_dummy] = df[columns_to_dummy].astype(str)  # avoids boolean issues
+
+    df = pd.get_dummies(df, columns=columns_to_dummy, drop_first=True)
+
+    # --- Now scale EVERYTHING ---
     scaler = StandardScaler()
     df[df.columns] = scaler.fit_transform(df[df.columns])
 
