@@ -16,60 +16,134 @@ from feature_engine.outliers import Winsorizer
 from feature_engine.wrappers import SklearnTransformerWrapper
 from kneed import KneeLocator
 from collections import Counter
+from haversine import haversine
 
 pd.set_option("display.max_columns", None)
+raw_data = pd.read_csv('Airbnb_Open_Data.csv')
 
-def preprocess_data_for_clustering(raw_data):
-    data = raw_data.copy()
+def data_prep(data, categories=True):
+    df = data.copy()
+    df = df.drop_duplicates()
 
-    categorical_features = data.select_dtypes(include=['object', 'category']).columns.tolist()
-    numerical_features = data.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    binary_features = data.select_dtypes(include=['bool']).columns.tolist()
+    # --- CLEAN PRICE + SERVICE FEE -------------------------------------------
+    for col in ["price", "service fee"]:
+        if col in df.columns:
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace("$", "", regex=False)
+                .str.replace(",", "", regex=False)
+            )
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    print("Categorical Features:", categorical_features)
-    print("Numerical Features:", numerical_features)
-    print("Binary Features:", binary_features)
+    # --- FORCE NUMERIC --------------------------------------------------------
+    numeric_cols_to_force = [
+        "minimum nights",
+        "availability 365",
+        "Construction year",
+        "number of reviews",
+        "reviews per month",
+        "review rate number",
+        "calculated host listings count",
+    ]
+    for col in numeric_cols_to_force:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    preprocess_pipeline = Pipeline([
-        ('numerical_imputer', MeanMedianImputer(
-            imputation_method='median',
-            variables=numerical_features
-        )),
-        # Handle outliers
-        ('outlier_handler', Winsorizer(
-            capping_method='gaussian',
-            tail='both',
-            fold=3,
-            variables=numerical_features
-        )),
-        # Normalize numeric data
-        ('scaler', SklearnTransformerWrapper(
-            transformer=StandardScaler(),
-            variables=numerical_features
-        ))
-    ])
+    # --- CLIP EXTREMES --------------------------------------------------------
+    df["availability 365"] = df["availability 365"].clip(lower=0, upper=365)
+    df["minimum nights"] = df["minimum nights"].clip(lower=0, upper=90)
 
-    if categorical_features:
-        preprocess_pipeline.steps.insert(1, ('categorical_imputer',
-                                             CategoricalImputer(
-                                                 imputation_method='frequent',
-                                                 variables=categorical_features
-                                             )
-                                             ))
+    # --- FIX SKEW (LOG1P) -----------------------------------------------------
+    if "minimum nights" in df.columns:
+        df["minimum nights"] = np.log1p(df["minimum nights"])
 
-        preprocess_pipeline.steps.append(('encoder',
-                                          OneHotEncoder(
-                                              variables=categorical_features,
-                                              drop_last=True
-                                          )
-                                          ))
+    if "availability 365" in df.columns:
+        df["availability 365"] = np.log1p(df["availability 365"])
 
-    processed_data = preprocess_pipeline.fit_transform(data)
+    if "number of reviews" in df.columns:
+        df["number of reviews"] = np.log1p(df["number of reviews"])
 
-    print(f"Original data shape: {data.shape}")
-    print(f"Processed data shape: {data.shape}")
+    if "calculated host listings count" in df.columns:
+        df["calculated host listings count"] = np.log1p(
+            df["calculated host listings count"]
+        )
 
-    return processed_data
+    # --- HAVERSINE DISTANCE ---------------------------------------------------
+    ts_lat = 40.7580
+    ts_long = -73.9855
+    if "lat" in df.columns and "long" in df.columns:
+        df["dist_to_times_sq"] = df.apply(
+            lambda r: haversine((r["lat"], r["long"]), (ts_lat, ts_long)),
+            axis=1,
+        )
+
+    # --- DROP UNUSED COLUMNS --------------------------------------------------
+    columns_to_drop = [
+        "host id",
+        "id",
+        "NAME",
+        "name",
+        "host name",
+        "neighbourhood",
+        "lat",
+        "long",
+        "country",
+        "country code",
+        "house_rules",
+        "license",
+        "last review",
+        "reviews per month",
+        "review rate number",
+        "service fee"
+    ]
+    df = df.drop(columns=[c for c in columns_to_drop if c in df.columns], errors="ignore")
+
+    # --- HANDLE MISSING -------------------------------------------------------
+    num_cols = df.select_dtypes(include="number").columns
+    df[num_cols] = df[num_cols].fillna(df[num_cols].median())
+    df["neighbourhood group"] = df["neighbourhood group"].replace({
+        "Brookln": "Brooklyn",
+        "Manhatan": "Manhattan",
+        "brookln": "Brooklyn",
+    })
+
+    df["neighbourhood group"] = df["neighbourhood group"].fillna("Missing")
+
+    df = df[df["neighbourhood group"] != "Staten Island"] # should we remove Bronx as well??
+
+    df = df[df["room type"].isin(["Private room", "Entire home/apt"])]
+
+    cat_cols = df.select_dtypes(include=["object", "category"]).columns
+    df[cat_cols] = df[cat_cols].fillna("Missing")
+    df = df[~df.eq("Missing").any(axis=1)]
+
+    # --- SCALE NUMERIC ONLY ---------------------------------------------------
+    num_cols = df.select_dtypes(include="number").columns
+    scaler = StandardScaler()
+    df[num_cols] = scaler.fit_transform(df[num_cols])
+
+    # --- DUMMY ENCODING -------------------------------------------
+    if categories:
+        cat_for_dummies = [
+            "host_identity_verified",
+            "neighbourhood group",
+            "instant_bookable",
+            "cancellation_policy",
+            "room type",
+        ]
+        cat_for_dummies = [c for c in cat_for_dummies if c in df.columns]
+
+        df = pd.get_dummies(df, columns=cat_for_dummies, drop_first=True)
+    else:
+        # drop all categorical columns entirely
+        df = df.select_dtypes(include="number")
+
+    # --- CLEANUP --------------------------------------------------------------
+    df = df.drop_duplicates()
+    df = df.fillna(0)
+
+    return df
 
 def find_optimal_k(data, max_k=15, method='all'):
     k_range = range(2, max_k + 1)
@@ -236,39 +310,6 @@ def run_kmeans(data, n_clusters=3):
         print(f"Cluster {i}: {count} samples ({count / len(labels):.1%})")
 
     return kmeans, labels
-
-def run_hierarchical(data, n_clusters=3, linkage_method='ward'):
-    model = AgglomerativeClustering(n_clusters=n_clusters, linkage=linkage_method)
-    labels = model.fit_predict(data)
-
-    sil_score = silhouette_score(data, labels)
-    print(f"Hierarchical clustering with {n_clusters} clusters (linkage: {linkage_method}):")
-    print(f"Silhouette Score: {sil_score:.3f}")
-
-    unique, counts = np.unique(labels, return_counts=True)
-    for i, count in zip(unique, counts):
-        print(f"Cluster {i}: {count} samples ({count / len(labels):.1%})")
-
-    return model, labels
-
-def plot_dendrogram(data, max_samples=100): # for hierarchical clustering
-    if len(data) > max_samples:
-        sample_idx = np.random.choice(len(data), max_samples, replace=False)
-        data_sample = data.iloc[sample_idx]
-    else:
-        data_sample = data
-
-    linked = linkage(data_sample, method='ward')
-
-    plt.figure(figsize=(16, 8))
-    dendrogram(linked,
-               orientation='top',
-               distance_sort='descending',
-               show_leaf_counts=True)
-    plt.title('Hierarchical Clustering Dendrogram')
-    plt.xlabel('Sample index')
-    plt.ylabel('Distance')
-    plt.show()
 
 def run_dbscan(data, eps=0.5, min_samples=5):
     model = DBSCAN(eps=eps, min_samples=min_samples)
@@ -469,10 +510,6 @@ def compare_clustering_models(data, n_clusters=3, eps=0.5, min_samples=5):
     kmeans, kmeans_labels = run_kmeans(data, n_clusters)
     results['K-means'] = (kmeans, kmeans_labels)
 
-    print("\nRunning Hierarchical clustering...")
-    hc, hc_labels = run_hierarchical(data, n_clusters)
-    results['Hierarchical'] = (hc, hc_labels)
-
     print("\nRunning DBSCAN clustering...")
     dbscan, dbscan_labels = run_dbscan(data, eps, min_samples)
     results['DBSCAN'] = (dbscan, dbscan_labels)
@@ -519,3 +556,31 @@ def compare_clustering_models(data, n_clusters=3, eps=0.5, min_samples=5):
             else:
                 print(f"{name}: N/A (fewer than 2 clusters found)")
     return results
+
+# 1. Preprocess data with your custom pipeline
+data_prepped = data_prep(raw_data, categories=True)
+print("Preprocessed data shape:", data_prepped.shape)
+
+# 2. Find a reasonable number of clusters for K-means and GMM
+optimal_k = find_optimal_k(data_prepped, max_k=10, method="all")
+print("Chosen number of clusters k:", optimal_k)
+
+# 3. Run and compare clustering models
+results = compare_clustering_models(
+    data_prepped,
+    n_clusters=optimal_k,
+    eps=0.5,
+    min_samples=5
+)
+
+# 4. Take K-means as the main clustering solution
+kmeans_model, kmeans_labels = results["K-means"]
+
+# 5. Visualize and describe cluster profiles
+plot_cluster_heatmap(data_prepped, kmeans_labels, top_n=10)
+plot_radar_chart(data_prepped, kmeans_labels, top_n=6)
+explain_clusters(data_prepped, kmeans_labels, top_n=10)
+
+# 6. Optional extra analysis helpers
+eps_auto = find_optimal_eps(data_prepped, min_samples=5)
+print("Auto suggested eps:", eps_auto)
