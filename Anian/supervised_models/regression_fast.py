@@ -7,6 +7,9 @@ from sklearn.svm import LinearSVR
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import mean_squared_error
 from scipy.stats import loguniform, randint, uniform
+from sklearn.svm import SVR
+from sklearn.neural_network import MLPRegressor
+from sklearn.ensemble import AdaBoostRegressor
 
 # -------------------------
 # FAST SEARCH WRAPPER
@@ -90,6 +93,41 @@ def train_lasso_fast(X, y):
     }
     return fast_search(Lasso(max_iter=5000, random_state=42), param_dist, X, y)
 
+def train_svr_fast(X, y):
+    # Based on teacher's train_svm_model
+    # We focus on 'rbf' as 'linear' is covered by LinearSVR
+    param_dist = {
+        'C': loguniform(0.1, 1000),
+        'gamma': loguniform(0.0001, 1),
+        'kernel': ['rbf', 'poly'], # 'rbf' is the most powerful
+        'epsilon': loguniform(0.01, 1)
+    }
+    # Note: SVR can be slow, so n_iter=10 might be safer here
+    # return fast_search(SVR(), param_dist, X, y, n_iter=10)
+    return fast_search(SVR(), param_dist, X, y, cv=3, n_iter=10)
+
+def train_adaboost_fast(X, y):
+    # Based on your teacher's adp_boost
+    param_dist = {
+        'n_estimators': randint(50, 300),
+        'learning_rate': loguniform(0.01, 1.0),
+        'loss': ['linear', 'square', 'exponential']
+    }
+    return fast_search(AdaBoostRegressor(random_state=42), param_dist, X, y)
+
+def train_mlp_fast(X, y):
+    # teacher's train_nn_model
+    param_dist = {
+        'hidden_layer_sizes': [(50,), (100,), (50, 50), (100, 50)],
+        'activation': ['relu', 'tanh'],
+        'solver': ['adam'], # Adam is the modern default
+        'alpha': loguniform(1e-5, 1.0),
+        'learning_rate_init': loguniform(0.0001, 0.01),
+        'early_stopping': [True],
+        'n_iter_no_change': [10]
+    }
+    # Use max_iter=1000 and let early_stopping find the right time
+    return fast_search(MLPRegressor(random_state=42, max_iter=1000), param_dist, X, y)
 
 def train_elastic_fast(X, y):
     # teachers params

@@ -13,9 +13,6 @@ def preprocess_for_regression(df_raw, target_variable):
     X = df.drop(columns=[target_variable])
     y = df[target_variable]
 
-    # 1. Log-transform the target variable
-    y = np.log1p(y)
-
     # 2. Detect types
     cat = X.select_dtypes(include=['object', 'bool']).columns.tolist()
     num = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
