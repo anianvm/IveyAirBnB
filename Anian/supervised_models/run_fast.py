@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 from Anian.pre_processing.preprocess_for_regression import preprocess_for_regression
 import Anian.supervised_models.regression_fast as rfast
 import Anian.supervised_models.regression_visuals as rvis
-from Anian.supervised_models.regression_ensemble_fast import (
+from Anian.supervised_models.regression_fast import (
     bag_fast, vote_fast, stack_fast
 )
 

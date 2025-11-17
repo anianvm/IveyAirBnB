@@ -52,7 +52,7 @@ def clean_airbnb_raw(df):
     cols_to_drop = [
         "host id", "id", "NAME", "name", "host name", "neighbourhood",
         "lat", "long", "country", "country code", "house_rules",
-        "license", "last review", "reviews per month", "review rate number"
+        "license", "last review", "reviews per month", "review rate number", "service fee"
     ]
     df = df.drop(columns=[c for c in cols_to_drop if c in df.columns], errors="ignore")
 
@@ -77,6 +77,6 @@ def clean_airbnb_raw(df):
     df[cat_cols] = df[cat_cols].fillna("Missing")
 
     # Remove rows that still have Missing values
-    df = df[~df.eq("Missing").any(axis=1)]
+    # df = df[~df.eq("Missing").any(axis=1)]
 
     return df
