@@ -3,10 +3,6 @@ import numpy as np
 import osmnx as ox
 from sklearn.neighbors import NearestNeighbors
 
-
-# ------------------------------------------------------------
-# 1. ROBUST OSM FETCH (Handles OSMnx 2.0+ and Timeouts)
-# ------------------------------------------------------------
 def fetch_osm_data(place, tags):
     # OSMnx v2.0+ uses features_from_place
     if hasattr(ox, 'features_from_place'):
@@ -16,7 +12,6 @@ def fetch_osm_data(place, tags):
         return ox.geometries_from_place(place, tags=tags)
     else:
         raise ImportError("Your version of osmnx is too old or incompatible.")
-
 
 def robust_osm_fetch(tags, place_name="New York City, USA"):
     print(f"Fetching OSM data for {tags}...")
@@ -111,10 +106,7 @@ def compute_airbnb_density(df):
 
     return df
 
-
-# ------------------------------------------------------------
-# MASTER FUNCTION (UPDATED WITH POIS)
-# ------------------------------------------------------------
+# run function
 def compute_open_data_features(df):
     df = df.copy()
 
