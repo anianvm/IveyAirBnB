@@ -106,6 +106,63 @@ def compute_airbnb_density(df):
 
     return df
 
+def compute_crime_statistics(df):
+    df = df.copy()
+
+    # Load crime data
+    crime_df = pd.read_csv("NYPD_Arrests_Data.csv")
+
+    # Valid coordinates
+    mask_airbnb = df["lat"].notna() & df["long"].notna()
+    mask_crime = crime_df["Latitude"].notna() & crime_df["Longitude"].notna()
+
+    # Prepare default columns
+    df["dist_to_nearest_crime"] = np.nan
+    df["crimes_within_250m"] = np.nan
+
+    if not mask_airbnb.any():
+        print("  > Warning: No valid Airbnb coordinates in input dataframe")
+        return df
+
+    crime_coords = crime_df.loc[mask_crime, ["Latitude", "Longitude"]].values
+
+    if crime_coords.size == 0:
+        print("  > Warning: No valid crime coordinates in NYPD_Arrests_Data.csv")
+        return df
+
+    airbnb_coords = df.loc[mask_airbnb, ["lat", "long"]].values
+
+    # Convert to radians
+    airbnb_rad = np.radians(airbnb_coords)
+    crime_rad = np.radians(crime_coords)
+
+    # NearestNeighbors on crime locations
+    nbrs = NearestNeighbors(metric="haversine", algorithm="ball_tree")
+    nbrs.fit(crime_rad)
+
+    earth_radius_m = 6371000.0
+
+    # 1. Distance to nearest crime (meters)
+    distances, _ = nbrs.kneighbors(airbnb_rad, n_neighbors=1)
+    df.loc[mask_airbnb, "dist_to_nearest_crime"] = distances[:, 0] * earth_radius_m
+
+    # 2. Number of crimes within 250 m
+    radius_meters = 250.0
+    radius_rad = radius_meters / earth_radius_m
+
+    neighbors_idx = nbrs.radius_neighbors(
+        airbnb_rad,
+        radius=radius_rad,
+        return_distance=False
+    )
+
+    crime_counts = np.array([len(idx_list) for idx_list in neighbors_idx])
+    df.loc[mask_airbnb, "crimes_within_250m"] = crime_counts
+
+    return df
+
+
+
 # run function
 def compute_open_data_features(df):
     df = df.copy()
@@ -116,6 +173,13 @@ def compute_open_data_features(df):
         df = compute_airbnb_density(df)
     except Exception as e:
         print(f"Density computation failed: {e}")
+    
+    # Area crime
+    print("Computing crime in the area...")
+    try:
+        df = compute_crime_statistics(df)
+    except Exception as e:
+        print(f"Crime computation failed: {e}")
 
     ## Manual distance to mid-town
     # Distance to Empire State Building
