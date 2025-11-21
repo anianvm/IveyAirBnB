@@ -29,7 +29,7 @@ def preprocess_for_regression(df_raw, target_variable):
         ('scaler', SklearnTransformerWrapper(transformer=StandardScaler(), variables=num)),
     ])
 
-    # 6. Fit and transform the X_proc DataFrame
+    # Fit and transform the X_proc DataFrame
     X_proc = pipeline.fit_transform(X_proc)
 
     return X_proc, y

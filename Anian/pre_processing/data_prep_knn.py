@@ -1,25 +1,25 @@
-import pandas as pd
+from Anian.pre_processing.clean_airbnb import clean_airbnb_raw
+from feature_engine.outliers import Winsorizer
+from feature_engine.encoding import OneHotEncoder
+from feature_engine.wrappers import SklearnTransformerWrapper
 from sklearn.preprocessing import StandardScaler
-from clean_airbnb import clean_airbnb_raw
+from sklearn.pipeline import Pipeline
 
 def preprocess_for_knn(df_raw):
     df = clean_airbnb_raw(df_raw)
 
-    # --- Dummy encoding first ---
-    columns_to_dummy = [
-        'host_identity_verified',
-        'neighbourhood group',
-        'instant_bookable',
-        'cancellation_policy',
-        'room type'
-    ]
+    cat = df.select_dtypes(include=['object', 'bool']).columns.tolist()
+    num = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
+    df[cat] = df[cat].astype(str)
 
-    df[columns_to_dummy] = df[columns_to_dummy].astype(str)  # avoids boolean issues
+    # Normalize columns & add hot-encoder specifically for kmeans instead of dummy
+    pipeline = Pipeline([
+        ('encoder', OneHotEncoder(variables=cat, drop_last=True)),
+        ('winsor', Winsorizer(capping_method='gaussian', tail='both', fold=3, variables=num)),
+        ('scaler', SklearnTransformerWrapper(transformer=StandardScaler(), variables=num)),
+    ])
 
-    df = pd.get_dummies(df, columns=columns_to_dummy, drop_first=True)
-
-    # --- Now scale EVERYTHING ---
-    scaler = StandardScaler()
-    df[df.columns] = scaler.fit_transform(df[df.columns])
+    # Fit and transform the df_proc DataFrame
+    df_processed = pipeline.fit_transform(df)
 
     return df

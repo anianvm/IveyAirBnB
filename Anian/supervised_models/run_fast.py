@@ -43,8 +43,8 @@ elastic = rfast.train_elastic_fast(x_train, y_train)
 print("\nTraining Fast Linear SVR…")
 lsvr = rfast.train_linear_svr_fast(x_train, y_train)
 
-print("\nTraining Fast SVR (RBF Kernel)…")
-svr = rfast.train_svr_fast(x_train, y_train)
+# print("\nTraining Fast SVR (RBF Kernel)…")
+# svr = rfast.train_svr_fast(x_train, y_train)
 
 print("\nTraining Fast AdaBoost…")
 adaboost = rfast.train_adaboost_fast(x_train, y_train)
@@ -61,7 +61,7 @@ single_models = {
     "Ridge": ridge,
     "ElasticNet": elastic,
     "LinearSVR": lsvr,
-    "SVR_RBF": svr,
+    # "SVR_RBF": svr,
     "AdaBoost": adaboost,
     "MLP": mlp,
 }
