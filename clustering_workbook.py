@@ -17,111 +17,14 @@ from feature_engine.wrappers import SklearnTransformerWrapper
 from kneed import KneeLocator
 from collections import Counter
 from haversine import haversine
+from clean_airbnb import clean_airbnb_raw
 
 pd.set_option("display.max_columns", None)
-raw_data = pd.read_csv('Airbnb_Open_Data.csv')
+raw_data = pd.read_csv("Airbnb_Open_Data.csv")
 
 def data_prep(data, categories=True):
     df = data.copy()
-    df = df.drop_duplicates()
-
-    # --- CLEAN PRICE + SERVICE FEE -------------------------------------------
-    for col in ["price", "service fee"]:
-        if col in df.columns:
-            df[col] = (
-                df[col]
-                .astype(str)
-                .str.replace("$", "", regex=False)
-                .str.replace(",", "", regex=False)
-            )
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-
-    # --- FORCE NUMERIC --------------------------------------------------------
-    numeric_cols_to_force = [
-        "minimum nights",
-        "availability 365",
-        "Construction year",
-        "number of reviews",
-        "reviews per month",
-        "review rate number",
-        "calculated host listings count",
-    ]
-    for col in numeric_cols_to_force:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-
-    # --- CLIP EXTREMES --------------------------------------------------------
-    df["availability 365"] = df["availability 365"].clip(lower=0, upper=365)
-    df["minimum nights"] = df["minimum nights"].clip(lower=0, upper=90)
-
-    # --- FIX SKEW (LOG1P) -----------------------------------------------------
-    if "minimum nights" in df.columns:
-        df["minimum nights"] = np.log1p(df["minimum nights"])
-
-    if "availability 365" in df.columns:
-        df["availability 365"] = np.log1p(df["availability 365"])
-
-    if "number of reviews" in df.columns:
-        df["number of reviews"] = np.log1p(df["number of reviews"])
-
-    if "calculated host listings count" in df.columns:
-        df["calculated host listings count"] = np.log1p(
-            df["calculated host listings count"]
-        )
-
-    # --- HAVERSINE DISTANCE ---------------------------------------------------
-    ts_lat = 40.7580
-    ts_long = -73.9855
-    if "lat" in df.columns and "long" in df.columns:
-        df["dist_to_times_sq"] = df.apply(
-            lambda r: haversine((r["lat"], r["long"]), (ts_lat, ts_long)),
-            axis=1,
-        )
-
-    # --- DROP UNUSED COLUMNS --------------------------------------------------
-    columns_to_drop = [
-        "host id",
-        "id",
-        "NAME",
-        "name",
-        "host name",
-        "neighbourhood",
-        "lat",
-        "long",
-        "country",
-        "country code",
-        "house_rules",
-        "license",
-        "last review",
-        "reviews per month",
-        "review rate number",
-        "service fee"
-    ]
-    df = df.drop(columns=[c for c in columns_to_drop if c in df.columns], errors="ignore")
-
-    # --- HANDLE MISSING -------------------------------------------------------
-    num_cols = df.select_dtypes(include="number").columns
-    df[num_cols] = df[num_cols].fillna(df[num_cols].median())
-    df["neighbourhood group"] = df["neighbourhood group"].replace({
-        "Brookln": "Brooklyn",
-        "Manhatan": "Manhattan",
-        "brookln": "Brooklyn",
-    })
-
-    df["neighbourhood group"] = df["neighbourhood group"].fillna("Missing")
-
-    df = df[df["neighbourhood group"] != "Staten Island"] # should we remove Bronx as well??
-
-    df = df[df["room type"].isin(["Private room", "Entire home/apt"])]
-
-    cat_cols = df.select_dtypes(include=["object", "category"]).columns
-    df[cat_cols] = df[cat_cols].fillna("Missing")
-    df = df[~df.eq("Missing").any(axis=1)]
-
-    # --- SCALE NUMERIC ONLY ---------------------------------------------------
-    num_cols = df.select_dtypes(include="number").columns
-    scaler = StandardScaler()
-    df[num_cols] = scaler.fit_transform(df[num_cols])
+    df = clean_airbnb_raw(df)
 
     # --- DUMMY ENCODING -------------------------------------------
     if categories:
@@ -143,9 +46,13 @@ def data_prep(data, categories=True):
     df = df.drop_duplicates()
     df = df.fillna(0)
 
+    print(df.shape)
+    print(df.describe())
+
     return df
 
-def find_optimal_k(data, max_k=15, method='all'):
+
+def find_optimal_k(data, max_k=10, method='all'):
     k_range = range(2, max_k + 1)
     inertia_values = []
     silhouette_scores = []
@@ -556,6 +463,7 @@ def compare_clustering_models(data, n_clusters=3, eps=0.5, min_samples=5):
             else:
                 print(f"{name}: N/A (fewer than 2 clusters found)")
     return results
+
 
 # 1. Preprocess data with your custom pipeline
 data_prepped = data_prep(raw_data, categories=True)
