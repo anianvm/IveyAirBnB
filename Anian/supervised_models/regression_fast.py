@@ -11,11 +11,10 @@ from sklearn.svm import SVR
 from sklearn.neural_network import MLPRegressor
 from sklearn.ensemble import AdaBoostRegressor
 
-# -------------------------
-# FAST SEARCH WRAPPER
-# -------------------------
+
+# ---- FAST SEARCH WRAPPER -----
+
 # We'll make this more robust: 20 iterations and 5-fold CV.
-# This is still MUCH faster than a full GridSearch.
 def fast_search(model, param_dist, X, y, cv=5, n_iter=20):
     search = RandomizedSearchCV(
         estimator=model,
@@ -39,15 +38,14 @@ def fast_search(model, param_dist, X, y, cv=5, n_iter=20):
 
 # In regression_fast.py, for train_tree_fast
 def train_tree_fast(X, y):
-    # This is based on your teacher's `train_tree_model` param_space
+    # teacher's `train_tree_model` param_space
     param_dist = {
         'max_depth': [None] + list(range(3, 31)),
-        'min_samples_split': randint(2, 21), # randint(2, 20) is also fine
+        'min_samples_split': randint(2, 21),
         'min_samples_leaf': randint(1, 11),
         'max_features': [None, 'sqrt', 'log2'] + list(np.arange(0.5, 1.0, 0.1)),
         'criterion': ['squared_error', 'friedman_mse', 'poisson']
     }
-    # Added random_state=42
     return fast_search(DecisionTreeRegressor(random_state=42), param_dist, X, y)
 
 

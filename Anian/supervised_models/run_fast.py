@@ -1,18 +1,17 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from Anian.pre_processing.preprocess_for_regression import preprocess_for_regression
+# from Anian.pre_processing.clean_airbnb import clean_airbnb_raw
 import Anian.supervised_models.regression_fast as rfast
 import Anian.supervised_models.regression_visuals as rvis
 from Anian.supervised_models.regression_fast import (
     bag_fast, vote_fast, stack_fast
 )
 
-# -------------------------------------------------------------------
-# 1. Load & preprocess data
-# -------------------------------------------------------------------
 df_raw = pd.read_csv(
     r"/Users/anianvonmengershausen/PycharmProjects/FinalAirBnB/Airbnb_Open_Data.csv"
 )
+
 X_processed, y = preprocess_for_regression(df_raw, target_variable="price")
 feature_names = X_processed.columns
 
@@ -20,9 +19,9 @@ x_train, x_test, y_train, y_test = train_test_split(
     X_processed, y, test_size=0.3, random_state=42
 )
 
-# -------------------------------------------------------------------
-# 2. Train SINGLE models
-# -------------------------------------------------------------------
+
+# train single models
+
 print("\nTraining Fast Tree…")
 tree = rfast.train_tree_fast(x_train, y_train)
 
@@ -67,9 +66,8 @@ single_models = {
     "MLP": mlp,
 }
 
-# -------------------------------------------------------------------
-# 3. Model explanations on single models
-# -------------------------------------------------------------------
+# model explanations
+
 print("\n=== TREE FEATURE IMPORTANCE ===")
 rvis.explain_tree_model(tree, feature_names)
 
@@ -84,9 +82,8 @@ rvis.explain_feature_importance(
 print("\n=== COMPARISON OF SINGLE MODELS ===")
 rvis.compare_regression_models(single_models, x_test, y_test)
 
-# -------------------------------------------------------------------
-# 4. Train ENSEMBLE models (using all single_models)
-# -------------------------------------------------------------------
+# train ensemble models
+
 print("\nBuilding Bagging Model…")
 bag = bag_fast(single_models, x_train, y_train)
 

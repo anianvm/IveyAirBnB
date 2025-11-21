@@ -13,20 +13,18 @@ def preprocess_for_regression(df_raw, target_variable):
     X = df.drop(columns=[target_variable])
     y = df[target_variable]
 
-    # 2. Detect types
+    # detect data types
     cat = X.select_dtypes(include=['object', 'bool']).columns.tolist()
     num = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
 
-    # 3. Convert booleans to string
+    # convert booleans to str to be detectable as a category
     X[cat] = X[cat].astype(str)
 
-    # 4. Create dummy variables FIRST (from X) and store in X_proc
+    # Create dummy columns
     X_proc = pd.get_dummies(X, columns=cat, drop_first=True)
 
-    # 5. NOW create the pipeline to scale ONLY the numerical columns
-    #    (Removing the redundant MeanMedianImputer)
+    # Normalize numerical columns
     pipeline = Pipeline([
-        # --- THIS IS THE FIX ---
         ('winsor', Winsorizer(capping_method='gaussian', tail='both', fold=3, variables=num)),
         ('scaler', SklearnTransformerWrapper(transformer=StandardScaler(), variables=num)),
     ])
