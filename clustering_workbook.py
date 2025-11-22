@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from clean_airbnb import clean_airbnb_raw
+from pre_processing.clean_airbnb import clean_airbnb_raw
 from kneed import KneeLocator
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.feature_selection import f_classif
