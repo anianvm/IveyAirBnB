@@ -22,4 +22,4 @@ def preprocess_for_knn(df_raw):
     # Fit and transform the df_proc DataFrame
     df_processed = pipeline.fit_transform(df)
 
-    return df
+    return df_processed

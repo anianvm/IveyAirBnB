@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from pre_processing.clean_airbnb import clean_airbnb_raw
+from pre_processing.preprocess_for_knn import preprocess_for_knn
 from kneed import KneeLocator
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.feature_selection import f_classif
@@ -13,34 +13,11 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import MinMaxScaler
 
 pd.set_option("display.max_columns", None)
-raw_data = pd.read_csv("Airbnb_Open_Data.csv")
+raw_data = pd.read_csv(r"/Users/anianvonmengershausen/PycharmProjects/airbnb/Airbnb_Open_Data.csv")
 
 def data_prep(data, categories=True):
     df = data.copy()
-    df = clean_airbnb_raw(df)
-
-    # --- DUMMY ENCODING -------------------------------------------
-    if categories:
-        cat_for_dummies = [
-            "host_identity_verified",
-            "neighbourhood group",
-            "instant_bookable",
-            "cancellation_policy",
-            "room type",
-        ]
-        cat_for_dummies = [c for c in cat_for_dummies if c in df.columns]
-
-        df = pd.get_dummies(df, columns=cat_for_dummies, drop_first=True)
-    else:
-        # drop all categorical columns entirely
-        df = df.select_dtypes(include="number")
-
-    # --- CLEANUP --------------------------------------------------------------
-    df = df.drop_duplicates()
-    df = df.fillna(0)
-
-    print(df.shape)
-    print(df.describe())
+    df = preprocess_for_knn(df)
 
     return df
 
