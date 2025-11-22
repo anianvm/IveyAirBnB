@@ -56,9 +56,6 @@ def clean_airbnb_raw(df):
         .fillna("Missing")
     )
 
-    # Remove boroughs we don't want
-    # df = df[df["neighbourhood group"] != "Staten Island"] # Bronx
-
     # filter down to most common room types
     df = df[df["room type"].isin(["Private room", "Entire home/apt"])]
 
@@ -68,8 +65,5 @@ def clean_airbnb_raw(df):
 
     cat_cols = df.select_dtypes(include=["object", "category"]).columns
     df[cat_cols] = df[cat_cols].fillna("Missing")
-
-    # Remove rows that still have Missing values
-    # df = df[~df.eq("Missing").any(axis=1)]
 
     return df

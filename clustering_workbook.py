@@ -1,23 +1,16 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.pipeline import Pipeline
-from sklearn.feature_selection import f_classif
-from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
-from sklearn.mixture import GaussianMixture
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
-from sklearn.neighbors import NearestNeighbors
-from scipy.cluster.hierarchy import dendrogram, linkage
-from feature_engine.imputation import MeanMedianImputer, CategoricalImputer
-from feature_engine.encoding import OneHotEncoder
-from feature_engine.outliers import Winsorizer
-from feature_engine.wrappers import SklearnTransformerWrapper
-from kneed import KneeLocator
 from collections import Counter
-from haversine import haversine
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from clean_airbnb import clean_airbnb_raw
+from kneed import KneeLocator
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.feature_selection import f_classif
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+from sklearn.mixture import GaussianMixture
+from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import MinMaxScaler
 
 pd.set_option("display.max_columns", None)
 raw_data = pd.read_csv("Airbnb_Open_Data.csv")

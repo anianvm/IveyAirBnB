@@ -4,10 +4,11 @@ import osmnx as ox
 from sklearn.neighbors import NearestNeighbors
 
 def fetch_osm_data(place, tags):
-    # OSMnx v2.0+ uses features_from_place
+    # Be sure to be able to use either API...
+    # OSMnx v2.0 uses features_from_place
     if hasattr(ox, 'features_from_place'):
         return ox.features_from_place(place, tags=tags)
-    # OSMnx v1.x uses geometries_from_place
+    # OSMnx v1. uses geometries_from_place
     elif hasattr(ox, 'geometries_from_place'):
         return ox.geometries_from_place(place, tags=tags)
     else:
@@ -26,7 +27,7 @@ def robust_osm_fetch(tags, place_name="New York City, USA"):
 
     gdf = pd.DataFrame()
 
-    # Change to go directly to borough method
+    # Try fetch all first, if not possible, try to fetch by borrow
     try:
         gdf = fetch_osm_data(place_name, tags)
     except Exception as e:
@@ -38,12 +39,11 @@ def robust_osm_fetch(tags, place_name="New York City, USA"):
                 if not sub_gdf.empty:
                     gdfs.append(sub_gdf)
             except Exception as err:
-                # Just log warning, don't crash if one borough fails
                 print(f"  > Warning: Could not fetch {borough} ({err})")
 
         if not gdfs:
             print(f"  > FAILED: All queries failed for tags={tags}")
-            return pd.DataFrame()  # Return empty so pipeline continues
+            return pd.DataFrame()
 
         gdf = pd.concat(gdfs)
 

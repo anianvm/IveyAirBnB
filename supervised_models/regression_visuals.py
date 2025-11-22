@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
     mean_absolute_error,
@@ -10,10 +9,7 @@ from sklearn.metrics import (
     r2_score
 )
 
-
-# ============================================================
-# 1. TREE EXPLANATION
-# ============================================================
+# Tree explanation
 def explain_tree_model(model, feature_names):
     """
     Plots simple feature importance for tree-based models.
@@ -33,14 +29,8 @@ def explain_tree_model(model, feature_names):
     plt.tight_layout()
     plt.show()
 
-
-# ============================================================
-# 2. REGULARIZED MODEL COEFFICIENT PLOT
-# ============================================================
+# reg. coefficient plot
 def explain_regularized_model(model, feature_names):
-    """
-    Plots coefficients for Lasso/Ridge/ElasticNet.
-    """
     if not hasattr(model, "coef_"):
         print("Model has no coef_. Skipping regularized explain.")
         return
@@ -60,13 +50,8 @@ def explain_regularized_model(model, feature_names):
     plt.show()
 
 
-# ============================================================
-# 3. PERMUTATION FEATURE IMPORTANCE
-# ============================================================
+# permutation importance
 def explain_feature_importance(model, X_train, y_train, X_test, y_test, n_repeats=5):
-    """
-    Model-agnostic permutation importance.
-    """
     result = permutation_importance(
         model,
         X_test,
@@ -89,14 +74,8 @@ def explain_feature_importance(model, X_train, y_train, X_test, y_test, n_repeat
     plt.tight_layout()
     plt.show()
 
-
-# ============================================================
-# 4. MODEL PERFORMANCE TABLE
-# ============================================================
+# model performance table
 def assess_model_performance(model, X_test, y_test):
-    """
-    Computes MAE, RMSE, R2.
-    """
     preds = model.predict(X_test)
     return {
         "MAE": mean_absolute_error(y_test, preds),
@@ -104,20 +83,10 @@ def assess_model_performance(model, X_test, y_test):
         "R2": r2_score(y_test, preds)
     }
 
-
-# ============================================================
-# 5. COMPARE MULTIPLE MODELS (VISUAL + TABLE)
-# ============================================================
+# performance bar plots
 def compare_regression_models(model_dict, X_test, y_test):
-    """
-    Creates:
-    - Performance table
-    - MAE, RMSE, R2 barplots
-    - Predicted vs Actual scatter
-    """
     results = {}
 
-    # ---- Compute metrics ----
     for name, model in model_dict.items():
         preds = model.predict(X_test)
         results[name] = {
@@ -129,7 +98,7 @@ def compare_regression_models(model_dict, X_test, y_test):
     df_res = pd.DataFrame(results).T
     print("\nMODEL PERFORMANCE:\n", df_res)
 
-    # ---- Barplot: R2 ----
+    #  Barplot: R2
     plt.figure(figsize=(8, 4))
     sns.barplot(x=df_res.index, y=df_res["R2"])
     plt.title("R² Score Comparison")
@@ -137,7 +106,7 @@ def compare_regression_models(model_dict, X_test, y_test):
     plt.tight_layout()
     plt.show()
 
-    # ---- Barplot: RMSE ----
+    #  Barplot: RMSE
     plt.figure(figsize=(8, 4))
     sns.barplot(x=df_res.index, y=df_res["RMSE"])
     plt.title("RMSE Comparison")
@@ -145,7 +114,7 @@ def compare_regression_models(model_dict, X_test, y_test):
     plt.tight_layout()
     plt.show()
 
-    # ---- Scatter: Actual vs Predicted ----
+    #  Scatter: Actual vs Predicted
     plt.figure(figsize=(6, 6))
     for name, model in model_dict.items():
         preds = model.predict(X_test)

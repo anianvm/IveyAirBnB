@@ -106,7 +106,7 @@ def generate_data_audit_report():
         plt.tight_layout()
         plt.show()
 
-file_path = r"/Airbnb_Open_Data.csv"
+file_path = r"/Users/anianvonmengershausen/PycharmProjects/airbnb/Airbnb_Open_Data.csv"
 sns.set_style("whitegrid")
 generate_data_audit_report()
 

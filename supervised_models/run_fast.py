@@ -43,7 +43,7 @@ print("\nTraining Fast Linear SVR…")
 lsvr = rfast.train_linear_svr_fast(x_train, y_train)
 
 # print("\nTraining Fast SVR (RBF Kernel)…")
-# svr = rfast.train_svr_fast(x_train, y_train)
+# svr = rfast.train_svr_fast(x_train, y_train) #<<- excluded due to time limits, takes long to train
 
 print("\nTraining Fast AdaBoost…")
 adaboost = rfast.train_adaboost_fast(x_train, y_train)
